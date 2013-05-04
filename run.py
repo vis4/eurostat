@@ -72,9 +72,10 @@ def import_tsv(db, table_id):
 
 
 def get_index(db):
-    print 'fetching table index'
+    sys.stdout.write('fetching table index')
     url = 'http://epp.eurostat.ec.europa.eu/NavTree_prod/everybody/BulkDownloadListing?dir=data&sort=-3&sort=2&start=all'
     r = requests.get(url)
+    sys.stdout.write('.\n')
     soup = BeautifulSoup(r.text)
     table = soup.find('table')
 
@@ -97,7 +98,9 @@ def get_index(db):
 
 
 def get_db():
+    sys.stdout.write('opening database connection')
     db = dataset.connect(config.DB)
+    sys.stdout.write('.\n')
     return db
 
 
