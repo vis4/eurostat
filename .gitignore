@@ -1,3 +1,6 @@
 .DS_Store
 import.log
 _old/*
+config.py
+*.pyc
+*.db
