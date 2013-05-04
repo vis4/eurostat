@@ -53,7 +53,7 @@ def import_tsv(src):
 if __name__ == '__main__':
 
     if len(sys.argv) == 1:
-        print 'Usage:  python import_tsv.py  eurostat_tsv_files  database '
+        print 'Usage:  python import_tsv.py  eurostat_tsv_files  database \n'
         exit()
 
     src = sys.argv[1]
