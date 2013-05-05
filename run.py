@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 
 from bs4 import BeautifulSoup
+from requests.exceptions import ConnectionError
 import dataset
 import requests
 
@@ -21,20 +22,20 @@ def get_table(table_id):
     # print 'downloading', table_id
     url = 'http://epp.eurostat.ec.europa.eu/NavTree_prod/everybody/BulkDownloadListing?sort=-3&file=data%%2F%s.tsv.gz' % table_id
     gz_tsv = 'tsv/%s.tsv.gz' % table_id
-    try:
-        with open(gz_tsv, 'wb') as handle:
-            request = requests.get(url, stream=True)
-            for block in request.iter_content(1024):
-                if not block:
-                    break
-                handle.write(block)
-    except:
-        return get_table(table_id)
+    with open(gz_tsv, 'wb') as handle:
+        request = requests.get(url, stream=True)
+        for block in request.iter_content(1024):
+            if not block:
+                break
+            handle.write(block)
     return gzip.open(gz_tsv, 'rb')
 
 
 def import_tsv(db, table_id):
-    tsv_file = get_table(table_id)
+    try:
+        tsv_file = get_table(table_id)
+    except ConnectionError:
+        return False
     sys.stdout.write(table_id+' ')
     c = 0
     try:
@@ -72,6 +73,7 @@ def import_tsv(db, table_id):
         sys.stdout.write('.')
     sys.stdout.write('\n')
     db['_tables'].upsert(dict(table_id=table_id, last_updated=datetime.now()), ['table_id'])
+    return True
 
 
 def get_index(db):
@@ -81,6 +83,8 @@ def get_index(db):
     sys.stdout.write('.\n')
     soup = BeautifulSoup(r.text)
     table = soup.find('table')
+
+    failed = []
 
     for tr in table.find_all('tr'):
         tds = tr.find_all('td')
@@ -98,7 +102,10 @@ def get_index(db):
                             print 'ignoring', tid
                             # ignore this table as we already imported the most recent version
                             continue
-                import_tsv(db, tid)
+                if not import_tsv(db, tid):
+                    failed.append(tid)
+    for tid in failed:
+        import_tsv(db, tid)
 
 
 def get_db():
