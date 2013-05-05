@@ -21,12 +21,15 @@ def get_table(table_id):
     # print 'downloading', table_id
     url = 'http://epp.eurostat.ec.europa.eu/NavTree_prod/everybody/BulkDownloadListing?sort=-3&file=data%%2F%s.tsv.gz' % table_id
     gz_tsv = 'tsv/%s.tsv.gz' % table_id
-    with open(gz_tsv, 'wb') as handle:
-        request = requests.get(url, stream=True)
-        for block in request.iter_content(1024):
-            if not block:
-                break
-            handle.write(block)
+    try:
+        with open(gz_tsv, 'wb') as handle:
+            request = requests.get(url, stream=True)
+            for block in request.iter_content(1024):
+                if not block:
+                    break
+                handle.write(block)
+    except:
+        return get_table(table_id)
     return gzip.open(gz_tsv, 'rb')
 
 
@@ -90,6 +93,7 @@ def get_index(db):
                     if db_tbl:
                         last_updated_s = tds[3].text.strip()  # 02/05/2013 23:00:06
                         last_updated = datetime.strptime(last_updated_s, '%d/%m/%Y %H:%M:%S')
+                        print db_tbl['last_updated'], last_updated
                         if last_updated < db_tbl['last_updated']:
                             print 'ignoring', tid
                             # ignore this table as we already imported the most recent version
