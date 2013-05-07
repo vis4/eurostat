@@ -60,8 +60,8 @@ def import_tsv(db, table_id):
             data['value'] = _get_float(row[i])
             data['value_s'] = row[i].strip()
             inserts.append(data)
-        if len(inserts) > 25000:
-            table.insert_many(inserts)
+        if len(inserts) > 50000:
+            table.insert_many(inserts, chunk_size=10000)
             inserts = []
             sys.stdout.write('.')
             c += 1
