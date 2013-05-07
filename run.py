@@ -1,6 +1,7 @@
 import gzip
 import sys
 import csv
+import math
 import config
 import logging
 from datetime import datetime
@@ -49,6 +50,8 @@ def import_tsv(db, table_id):
     dim = map(lambda k: k.strip(), head[0].split(','))
     dim[-1], h = dim[-1].split('\\')
     inserts = []
+    nrows = 0  # count rows
+    sbegin = datetime.now()  # measure time for import
     for row in csv_in:
         # explode first column
         rdim = row[0].split(',')
@@ -60,20 +63,32 @@ def import_tsv(db, table_id):
             data['value'] = _get_float(row[i])
             data['value_s'] = row[i].strip()
             inserts.append(data)
+            nrows += 1
         if len(inserts) > 50000:
             table.insert_many(inserts, chunk_size=10000)
             inserts = []
             sys.stdout.write('.')
             c += 1
-            if c % 4 == 0:
+            if c % 5 == 0:
                 sys.stdout.write(' ')
 
     if len(inserts) > 0:
         table.insert_many(inserts)
         sys.stdout.write('.')
-    sys.stdout.write('\n')
+    dur = datetime.now() - sbegin
+    sys.stdout.write(' %s rows / %.1fs \n' % (_fmtNum(nrows), dur.total_seconds()))
     db['_tables'].upsert(dict(table_id=table_id, last_updated=datetime.now()), ['table_id'])
     return True
+
+
+def _fmtNum(n):
+    suffix = ['', 'k', 'm', 'b']
+    k = len(suffix)
+    for i in range(k - 1, 0, -1):
+        d = math.pow(10, i * 3)
+        if n >= d:
+            return '%.1f%s' % (float(n) / d, suffix[i])
+    return str(n)
 
 
 def get_index(db):
@@ -97,7 +112,7 @@ def get_index(db):
                     if db_tbl:
                         last_updated_s = tds[3].text.strip()  # 02/05/2013 23:00:06
                         last_updated = datetime.strptime(last_updated_s, '%d/%m/%Y %H:%M:%S')
-                        print db_tbl['last_updated'], last_updated
+                        # print db_tbl['last_updated'], last_updated
                         if last_updated < db_tbl['last_updated']:
                             print 'ignoring', tid
                             # ignore this table as we already imported the most recent version
